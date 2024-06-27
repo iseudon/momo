@@ -182,8 +182,8 @@ export default {
         const displayEndMonth = hasEndMonth ? endMonth : endMonth - 1;
         const monthCount = displayEndMonth - displayStartMonth + 1;
 
-        // キャンバスのサイズを設定
-        const monthWidth = 200; // 1ヶ月あたりの幅
+        // キャンバスのサイズを設定（幅を広げる）
+        const monthWidth = 250; // 1ヶ月あたりの幅を広げる
         canvas.width = monthCount * monthWidth;
         canvas.height = 450;
 
@@ -195,18 +195,27 @@ export default {
         ctx.fillRect(0, 0, width, height);
 
         // タイトルを描画
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = '#4A4A4A';
         ctx.font = 'bold 20px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('', width / 2, 25);
+        ctx.fillText('桃の食べ頃カレンダー', width / 2, 25);
 
         // 月と旬の区切り線を描画
-        ctx.strokeStyle = '#000000';
+        ctx.strokeStyle = '#4A4A4A';
         ctx.lineWidth = 2;
         ctx.font = '16px Arial';
         ctx.textAlign = 'center';
 
-        for (let i = 0; i < monthCount; i++) {
+        // 線とラベルの間の空白
+        const lineMargin = 2;
+
+        // 始端の左の線を描画
+        ctx.beginPath();
+        ctx.moveTo(lineMargin, 60);
+        ctx.lineTo(lineMargin, height);
+        ctx.stroke();
+
+        for (let i = 0; i <= monthCount; i++) {
           const month = displayStartMonth + i;
           const x = i * monthWidth;
 
@@ -216,25 +225,32 @@ export default {
           ctx.lineTo(x, height);
           ctx.stroke();
 
-          // 月のラベル
-          ctx.fillText(`${month}月`, x + monthWidth / 2, 50);
+          // 月のラベル（最後の月は右端に表示）
+          if (i < monthCount) {
+            ctx.fillText(`${month}月`, x + monthWidth / 2, 50);
+          }
 
           // 旬の区切り線（破線）
-          ctx.setLineDash([5, 5]);
-          ctx.lineWidth = 1;
-          for (let j = 1; j <= 2; j++) {
-            const subX = x + (monthWidth * j / 3);
-            ctx.beginPath();
-            ctx.moveTo(subX, 60);
-            ctx.lineTo(subX, height);
-            ctx.stroke();
+          if (i < monthCount) {
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 1;
+            for (let j = 1; j <= 2; j++) {
+              const subX = x + (monthWidth * j / 3);
+              ctx.beginPath();
+              ctx.moveTo(subX, 60);
+              ctx.lineTo(subX, height);
+              ctx.stroke();
+            }
+            ctx.setLineDash([]);
+            ctx.lineWidth = 2;
           }
-          ctx.setLineDash([]);
         }
+
+        const labelHeight = 30;
 
         // 桃のラベルを描画
         ctx.lineWidth = 1;
-        let currentRow = 0;
+        let rows = [];
         peaches.value.forEach((peach) => {
           const startMonth = parseInt(peach.startPeriod.split('-')[0]);
           const startDecade = parseInt(peach.startPeriod.split('-')[1]);
@@ -244,60 +260,77 @@ export default {
           const startX = (startMonth - displayStartMonth) * monthWidth + ((startDecade - 1) * monthWidth / 3);
           const endX = (endMonth - displayStartMonth + 1) * monthWidth - ((3 - endDecade) * monthWidth / 3);
           const labelWidth = endX - startX + 28; // 2文字分広げる
-          const labelHeight = 30;
 
-          const y = 70 + currentRow * (labelHeight + 10);
+          // 重なりチェックと行の割り当て
+          let rowIndex = rows.findIndex(row => {
+            return row.every(item => item.endX <= startX || item.startX >= endX);
+          });
 
-          // グラデーションの作成
-          let gradient;
-          if (peach.color === 'yellow') {
-            gradient = ctx.createLinearGradient(startX, 0, startX + labelWidth, 0);
-            gradient.addColorStop(0, "#F1E8CE");
-            gradient.addColorStop(1, "#F0D38D");
-          } else {
-            gradient = ctx.createLinearGradient(startX, 0, startX + labelWidth, 0);
-            gradient.addColorStop(0, "#F3D0D1");
-            gradient.addColorStop(1, "#F19E95");
+          if (rowIndex === -1) {
+            rows.push([]);
+            rowIndex = rows.length - 1;
           }
 
-          // 桃のラベルの背景
-          ctx.fillStyle = gradient;
-
-          if (peach.texture === 'soft') {
-            // 柔らかい桃の場合、より丸みのある四角形を描画
-            const radius = labelHeight / 2 + 5; // 丸みを増加
-            ctx.beginPath();
-            ctx.moveTo(startX + radius, y);
-            ctx.lineTo(startX + labelWidth - radius, y);
-            ctx.quadraticCurveTo(startX + labelWidth, y, startX + labelWidth, y + radius);
-            ctx.lineTo(startX + labelWidth, y + labelHeight - radius);
-            ctx.quadraticCurveTo(startX + labelWidth, y + labelHeight, startX + labelWidth - radius, y + labelHeight);
-            ctx.lineTo(startX + radius, y + labelHeight);
-            ctx.quadraticCurveTo(startX, y + labelHeight, startX, y + labelHeight - radius);
-            ctx.lineTo(startX, y + radius);
-            ctx.quadraticCurveTo(startX, y, startX + radius, y);
-            ctx.fill();
-          } else {
-            // 硬い桃の場合、通常の四角形を描画
-            ctx.fillRect(startX, y, labelWidth, labelHeight);
-          }
-
-          // 桃のラベルのテキスト
-          ctx.fillStyle = '#000000';
-          ctx.font = '14px Arial';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(peach.name, startX + labelWidth / 2, y + labelHeight / 2);
-
-          currentRow++;
+          rows[rowIndex].push({ startX, endX, peach, labelWidth });
         });
 
-        // 終端の月の右側に線を追加
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2;
+        // 各行のラベルを描画
+        rows.forEach((row, rowIndex) => {
+          const y = 70 + rowIndex * (labelHeight + 10);
+
+          row.forEach(({ startX, endX, peach, labelWidth }) => {
+            // グラデーションの作成
+            let gradient;
+            if (peach.color === 'yellow') {
+              gradient = ctx.createLinearGradient(startX, 0, startX + labelWidth, 0);
+              gradient.addColorStop(0, "#F1E8CE");
+              gradient.addColorStop(1, "#F0D38D");
+            } else {
+              gradient = ctx.createLinearGradient(startX, 0, startX + labelWidth, 0);
+              gradient.addColorStop(0, "#F3D0D1");
+              gradient.addColorStop(1, "#F19E95");
+            }
+
+            // 桃のラベルの背景
+            ctx.fillStyle = gradient;
+
+            // 線とラベルの間に空白を設ける
+            const adjustedStartX = Math.max(startX, lineMargin);
+            const adjustedEndX = Math.min(endX, width - lineMargin);
+            const adjustedLabelWidth = adjustedEndX - adjustedStartX;
+
+            if (peach.texture === 'soft') {
+              // 柔らかい桃の場合、両端が丸い形状を描画
+              const radius = labelHeight / 2;
+              ctx.beginPath();
+              ctx.moveTo(adjustedStartX + radius, y);
+              ctx.lineTo(adjustedStartX + adjustedLabelWidth - radius, y);
+              ctx.quadraticCurveTo(adjustedStartX + adjustedLabelWidth, y, adjustedStartX + adjustedLabelWidth, y + radius);
+              ctx.lineTo(adjustedStartX + adjustedLabelWidth, y + labelHeight - radius);
+              ctx.quadraticCurveTo(adjustedStartX + adjustedLabelWidth, y + labelHeight, adjustedStartX + adjustedLabelWidth - radius, y + labelHeight);
+              ctx.lineTo(adjustedStartX + radius, y + labelHeight);
+              ctx.quadraticCurveTo(adjustedStartX, y + labelHeight, adjustedStartX, y + labelHeight - radius);
+              ctx.lineTo(adjustedStartX, y + radius);
+              ctx.quadraticCurveTo(adjustedStartX, y, adjustedStartX + radius, y);
+              ctx.fill();
+            } else {
+              // 硬い桃の場合、通常の四角形を描画
+              ctx.fillRect(adjustedStartX, y, adjustedLabelWidth, labelHeight);
+            }
+
+            // 桃のラベルのテキスト
+            ctx.fillStyle = '#4A4A4A';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(peach.name, adjustedStartX + adjustedLabelWidth / 2, y + labelHeight / 2);
+          });
+        });
+
+        // 終端の右の線を描画
         ctx.beginPath();
-        ctx.moveTo(width, 60);
-        ctx.lineTo(width, height);
+        ctx.moveTo(width - lineMargin, 60);
+        ctx.lineTo(width - lineMargin, height);
         ctx.stroke();
 
         // キャンバスを画像データURLに変換
@@ -334,7 +367,7 @@ export default {
 <style>
 :root {
   --background-color: #ffffff;
-  --text-color: #000000;
+  --text-color: #4A4A4A;
   --border-color: #dddddd;
   --input-background: #f0f0f0;
 }
@@ -343,7 +376,7 @@ export default {
   :root {
     /* ダークモードでもライトモードと同じ色を使用 */
     --background-color: #ffffff;
-    --text-color: #000000;
+    --text-color: #4A4A4A;
     --border-color: #dddddd;
     --input-background: #f0f0f0;
   }
