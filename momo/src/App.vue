@@ -47,7 +47,7 @@
 
     <!-- 桃の一覧 -->
     <h2>桃の一覧</h2>
-    <draggable v-model="peaches" @end="updateOrder" item-key="id">
+    <draggable v-model="peaches" @end="updateOrder" item-key="id" class="draggable-list">
       <template #item="{ element, index }">
         <li class="draggable-item">
           {{ element.name }} - {{ getPeriodLabel(element.startPeriod) }}から{{ getPeriodLabel(element.endPeriod) }}
@@ -66,7 +66,7 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import draggable from 'vuedraggable';
 
 export default {
@@ -87,12 +87,10 @@ export default {
 
     const months = [5, 6, 7, 8, 9, 10];
 
-    const getPeriodValue = (month, decade) => `${month}-${decade}`;
-
     const updateStartPeriod = () => {
       if (newPeach.value.startMonth && newPeach.value.startDecade) {
-        const startValue = getPeriodValue(newPeach.value.startMonth, newPeach.value.startDecade);
-        const endValue = getPeriodValue(newPeach.value.endMonth, newPeach.value.endDecade);
+        const startValue = `${newPeach.value.startMonth}-${newPeach.value.startDecade}`;
+        const endValue = `${newPeach.value.endMonth}-${newPeach.value.endDecade}`;
         if (endValue && startValue > endValue) {
           newPeach.value.endMonth = newPeach.value.startMonth;
           newPeach.value.endDecade = newPeach.value.startDecade;
@@ -102,8 +100,8 @@ export default {
 
     const updateEndPeriod = () => {
       if (newPeach.value.endMonth && newPeach.value.endDecade) {
-        const startValue = getPeriodValue(newPeach.value.startMonth, newPeach.value.startDecade);
-        const endValue = getPeriodValue(newPeach.value.endMonth, newPeach.value.endDecade);
+        const startValue = `${newPeach.value.startMonth}-${newPeach.value.startDecade}`;
+        const endValue = `${newPeach.value.endMonth}-${newPeach.value.endDecade}`;
         if (startValue && endValue < startValue) {
           newPeach.value.startMonth = newPeach.value.endMonth;
           newPeach.value.startDecade = newPeach.value.endDecade;
@@ -112,19 +110,19 @@ export default {
     };
 
     const addPeach = () => {
-      const newPeach = {
-        id: Date.now(), // ユニークなIDとして現在のタイムスタンプを使用
-        name: newPeachData.value.name,
-        startPeriod: `${newPeachData.value.startMonth}-${newPeachData.value.startDecade}`,
-        endPeriod: `${newPeachData.value.endMonth}-${newPeachData.value.endDecade}`,
-        color: newPeachData.value.color,
-        texture: newPeachData.value.texture
+      const peach = {
+        id: Date.now(),
+        name: newPeach.value.name,
+        startPeriod: `${newPeach.value.startMonth}-${newPeach.value.startDecade}`,
+        endPeriod: `${newPeach.value.endMonth}-${newPeach.value.endDecade}`,
+        color: newPeach.value.color,
+        texture: newPeach.value.texture
       };
 
-      peaches.value.push(newPeach);
+      peaches.value.push(peach);
 
       // フォームをリセット
-      newPeachData.value = {
+      newPeach.value = {
         name: '',
         startMonth: '',
         startDecade: '',
@@ -159,131 +157,147 @@ export default {
     };
 
     const updateOrder = () => {
-      // ドラッグ＆ドロップ後の処理
-      // 必要に応じて追加の処理を行うことができます
       console.log('Order updated:', peaches.value);
     };
 
     const generateChart = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
 
-      // 表示する月の範囲を決定
-      const startMonth = Math.min(...peaches.value.map(p => parseInt(p.startPeriod.split('-')[0])));
-      const endMonth = Math.max(...peaches.value.map(p => parseInt(p.endPeriod.split('-')[0])));
-      const monthCount = endMonth - startMonth + 1;
+        // 表示する月の範囲を決定
+        const allMonths = peaches.value.flatMap(p => [
+          parseInt(p.startPeriod.split('-')[0]),
+          parseInt(p.endPeriod.split('-')[0])
+        ]);
+        const startMonth = Math.min(...allMonths);
+        const endMonth = Math.max(...allMonths);
 
-      // キャンバスのサイズを設定
-      const monthWidth = 200; // 1ヶ月あたりの幅
-      canvas.width = monthCount * monthWidth;
-      canvas.height = 450;
+        // 始端と終端の月に桃があるか確認
+        const hasStartMonth = peaches.value.some(p => parseInt(p.startPeriod.split('-')[0]) === startMonth || parseInt(p.endPeriod.split('-')[0]) === startMonth);
+        const hasEndMonth = peaches.value.some(p => parseInt(p.startPeriod.split('-')[0]) === endMonth || parseInt(p.endPeriod.split('-')[0]) === endMonth);
 
-      const width = canvas.width;
-      const height = canvas.height;
+        // 表示する月の範囲を調整
+        const displayStartMonth = hasStartMonth ? startMonth : startMonth + 1;
+        const displayEndMonth = hasEndMonth ? endMonth : endMonth - 1;
+        const monthCount = displayEndMonth - displayStartMonth + 1;
 
-      // 背景を描画
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, width, height);
+        // キャンバスのサイズを設定
+        const monthWidth = 200; // 1ヶ月あたりの幅
+        canvas.width = monthCount * monthWidth;
+        canvas.height = 450;
 
-      // タイトルを描画
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 20px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('桃の食べ頃カレンダー', width / 2, 25);
+        const width = canvas.width;
+        const height = canvas.height;
 
-      // 月と旬の区切り線を描画
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      ctx.font = '16px Arial';
-      ctx.textAlign = 'center';
+        // 背景を描画
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
 
-      for (let i = 0; i < monthCount; i++) {
-        const month = startMonth + i;
-        const x = i * monthWidth;
-
-        // 月の境界線（実線）
-        ctx.beginPath();
-        ctx.moveTo(x, 60);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-
-        // 月のラベル
-        ctx.fillText(`${month}月`, x + monthWidth / 2, 50);
-
-        // 旬の区切り線（破線）
-        ctx.setLineDash([5, 5]);
-        ctx.lineWidth = 1;
-        for (let j = 1; j <= 2; j++) {
-          const subX = x + (monthWidth * j / 3);
-          ctx.beginPath();
-          ctx.moveTo(subX, 60);
-          ctx.lineTo(subX, height);
-          ctx.stroke();
-        }
-        ctx.setLineDash([]);
-      }
-
-      // 桃のラベルを描画
-      ctx.lineWidth = 1;
-      let currentRow = 0;
-      peaches.value.forEach((peach) => {
-        const startMonth = parseInt(peach.startPeriod.split('-')[0]);
-        const startDecade = parseInt(peach.startPeriod.split('-')[1]);
-        const endMonth = parseInt(peach.endPeriod.split('-')[0]);
-        const endDecade = parseInt(peach.endPeriod.split('-')[1]);
-
-        const startX = (startMonth - startMonth) * monthWidth + ((startDecade - 1) * monthWidth / 3);
-        const endX = (endMonth - startMonth + 1) * monthWidth + (endDecade * monthWidth / 3);
-        const labelWidth = endX - startX;
-        const labelHeight = 30;
-
-        const y = 70 + currentRow * (labelHeight + 10);
-
-        // 桃のラベルの背景
-        ctx.fillStyle = peach.color === 'yellow' ? '#FFD700' : '#FFC0CB';
-
-        if (peach.texture === 'soft') {
-          // 柔らかい桃の場合、角丸の四角形を描画
-          const radius = labelHeight / 2;
-          ctx.beginPath();
-          ctx.moveTo(startX + radius, y);
-          ctx.lineTo(endX - radius, y);
-          ctx.quadraticCurveTo(endX, y, endX, y + radius);
-          ctx.lineTo(endX, y + labelHeight - radius);
-          ctx.quadraticCurveTo(endX, y + labelHeight, endX - radius, y + labelHeight);
-          ctx.lineTo(startX + radius, y + labelHeight);
-          ctx.quadraticCurveTo(startX, y + labelHeight, startX, y + labelHeight - radius);
-          ctx.lineTo(startX, y + radius);
-          ctx.quadraticCurveTo(startX, y, startX + radius, y);
-          ctx.fill();
-          ctx.stroke();
-        } else {
-          // 硬い桃の場合、通常の四角形を描画
-          ctx.fillRect(startX, y, labelWidth, labelHeight);
-          ctx.strokeRect(startX, y, labelWidth, labelHeight);
-        }
-
-        // 桃のラベルのテキスト
+        // タイトルを描画
         ctx.fillStyle = '#000000';
-        ctx.font = '14px Arial';
+        ctx.font = 'bold 20px Arial';
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(peach.name, startX + labelWidth / 2, y + labelHeight / 2);
+        ctx.fillText('', width / 2, 25);
 
-        currentRow++;
-      });
+        // 月と旬の区切り線を描画
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
 
-      // キャンバスを画像データURLに変換
-      const imageDataUrl = canvas.toDataURL('image/png');
+        for (let i = 0; i < monthCount; i++) {
+          const month = displayStartMonth + i;
+          const x = i * monthWidth;
 
-      // 新しいタブで画像を開く
-      const newTab = window.open();
-      newTab.document.write('<img src="' + imageDataUrl + '" alt="Peach Chart">');
+          // 月の境界線（実線）
+          ctx.beginPath();
+          ctx.moveTo(x, 60);
+          ctx.lineTo(x, height);
+          ctx.stroke();
+
+          // 月のラベル
+          ctx.fillText(`${month}月`, x + monthWidth / 2, 50);
+
+          // 旬の区切り線（破線）
+          ctx.setLineDash([5, 5]);
+          ctx.lineWidth = 1;
+          for (let j = 1; j <= 2; j++) {
+            const subX = x + (monthWidth * j / 3);
+            ctx.beginPath();
+            ctx.moveTo(subX, 60);
+            ctx.lineTo(subX, height);
+            ctx.stroke();
+          }
+          ctx.setLineDash([]);
+        }
+
+        // 桃のラベルを描画
+        ctx.lineWidth = 1;
+        let currentRow = 0;
+        peaches.value.forEach((peach) => {
+          const startMonth = parseInt(peach.startPeriod.split('-')[0]);
+          const startDecade = parseInt(peach.startPeriod.split('-')[1]);
+          const endMonth = parseInt(peach.endPeriod.split('-')[0]);
+          const endDecade = parseInt(peach.endPeriod.split('-')[1]);
+
+          const startX = (startMonth - displayStartMonth) * monthWidth + ((startDecade - 1) * monthWidth / 3);
+          const endX = (endMonth - displayStartMonth + 1) * monthWidth - ((3 - endDecade) * monthWidth / 3);
+          const labelWidth = endX - startX;
+          const labelHeight = 30;
+
+          const y = 70 + currentRow * (labelHeight + 10);
+
+          // 桃のラベルの背景
+          ctx.fillStyle = peach.color === 'yellow' ? '#FFD700' : '#FFC0CB';
+
+          if (peach.texture === 'soft') {
+            // 柔らかい桃の場合、角丸の四角形を描画
+            const radius = labelHeight / 2;
+            ctx.beginPath();
+            ctx.moveTo(startX + radius, y);
+            ctx.lineTo(endX - radius, y);
+            ctx.quadraticCurveTo(endX, y, endX, y + radius);
+            ctx.lineTo(endX, y + labelHeight - radius);
+            ctx.quadraticCurveTo(endX, y + labelHeight, endX - radius, y + labelHeight);
+            ctx.lineTo(startX + radius, y + labelHeight);
+            ctx.quadraticCurveTo(startX, y + labelHeight, startX, y + labelHeight - radius);
+            ctx.lineTo(startX, y + radius);
+            ctx.quadraticCurveTo(startX, y, startX + radius, y);
+            ctx.fill();
+            ctx.stroke();
+          } else {
+            // 硬い桃の場合、通常の四角形を描画
+            ctx.fillRect(startX, y, labelWidth, labelHeight);
+            ctx.strokeRect(startX, y, labelWidth, labelHeight);
+          }
+
+          // 桃のラベルのテキスト
+          ctx.fillStyle = '#000000';
+          ctx.font = '14px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(peach.name, startX + labelWidth / 2, y + labelHeight / 2);
+
+          currentRow++;
+        });
+
+        // キャンバスを画像データURLに変換
+        const imageDataUrl = canvas.toDataURL('image/png');
+
+        // 新しいタブで画像を開く
+        const newTab = window.open();
+        newTab.document.write('<img src="' + imageDataUrl + '" alt="Peach Chart">');
+        newTab.document.close();
+
+        console.log('Chart generated successfully');
+      } catch (error) {
+        console.error('Error generating chart:', error);
+      }
     };
 
     return {
       peaches,
-      updateOrder,
       newPeach,
       months,
       addPeach,
@@ -292,18 +306,43 @@ export default {
       getPeriodLabel,
       generateChart,
       updateStartPeriod,
-      updateEndPeriod
+      updateEndPeriod,
+      updateOrder
     };
   }
 }
 </script>
 
-<style scoped>
+<style>
+:root {
+  --background-color: #ffffff;
+  --text-color: #000000;
+  --border-color: #dddddd;
+  --input-background: #f0f0f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* ダークモードでもライトモードと同じ色を使用 */
+    --background-color: #ffffff;
+    --text-color: #000000;
+    --border-color: #dddddd;
+    --input-background: #f0f0f0;
+  }
+}
+
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
 .peach-planner {
   max-width: 600px;
   margin: 0 auto;
   padding: 20px;
   font-family: Arial, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
 form {
@@ -318,6 +357,15 @@ form {
   gap: 10px;
 }
 
+input,
+select,
+button {
+  background-color: var(--input-background);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  padding: 5px;
+}
+
 .draggable-list {
   list-style-type: none;
   padding: 0;
@@ -327,7 +375,25 @@ form {
   cursor: move;
   padding: 10px;
   margin-bottom: 5px;
-  background-color: #f0f0f0;
-  border: 1px solid #ddd;
+  background-color: var(--input-background);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+}
+
+button {
+  cursor: pointer;
+  background-color: var(--input-background);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  padding: 5px 10px;
+}
+
+button:hover {
+  opacity: 0.8;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>
