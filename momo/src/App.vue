@@ -165,7 +165,7 @@ export default {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
-        // スケールファクターを定義（2倍の解像度）
+        // スケールファクターを定義
         const scale = 1.5;
 
         // 表示する月の範囲を決定
@@ -185,7 +185,7 @@ export default {
         const displayEndMonth = hasEndMonth ? endMonth : endMonth - 1;
         const monthCount = displayEndMonth - displayStartMonth + 1;
 
-        // キャンバスのサイズを設定（幅を広げ、高解像度化）
+        // キャンバスのサイズを設定
         const monthWidth = 250 * scale;
         canvas.width = monthCount * monthWidth;
         canvas.height = 400 * scale;
@@ -195,15 +195,10 @@ export default {
 
         // コンテキストのスケールを設定
         ctx.scale(scale, scale);
+
         // 背景を描画
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, width / scale, height / scale);
-
-        // タイトルを描画
-        ctx.fillStyle = '#4A4A4A';
-        ctx.font = `bold ${18}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.fillText('桃カレンダー', width / (2 * scale), 25);
 
         // 月と旬の区切り線を描画
         ctx.strokeStyle = '#4A4A4A';
@@ -216,7 +211,7 @@ export default {
 
         // 始端の左の線を描画
         ctx.beginPath();
-        ctx.moveTo(lineMargin / scale, 50);
+        ctx.moveTo(lineMargin / scale, 30);
         ctx.lineTo(lineMargin / scale, height / scale);
         ctx.stroke();
 
@@ -226,13 +221,13 @@ export default {
 
           // 月の境界線（実線）
           ctx.beginPath();
-          ctx.moveTo(x + lineMargin / scale, 50);
+          ctx.moveTo(x + lineMargin / scale, 30);
           ctx.lineTo(x + lineMargin / scale, height / scale);
           ctx.stroke();
 
-          // 月のラベル（最後の月は右端に表示）
+          // 月のラベル
           if (i < monthCount) {
-            ctx.fillText(`${month}月`, x + (monthWidth / scale) / 2, 40);
+            ctx.fillText(`${month}月`, x + (monthWidth / scale) / 2, 20);
           }
 
           // 旬の区切り線（実線、薄い色）
@@ -241,7 +236,7 @@ export default {
             for (let j = 1; j <= 2; j++) {
               const subX = x + ((monthWidth / scale) * j / 3);
               ctx.beginPath();
-              ctx.moveTo(subX, 50);
+              ctx.moveTo(subX, 30);
               ctx.lineTo(subX, height / scale);
               ctx.stroke();
             }
@@ -279,10 +274,10 @@ export default {
 
         // 各行のラベルを描画
         rows.forEach((row, rowIndex) => {
-          const y = 60 + rowIndex * ((labelHeight / scale) + 10);
+          const y = 40 + rowIndex * ((labelHeight / scale) + 10);
 
           row.forEach(({ startX, endX, peach, labelWidth }) => {
-            // ... (グラデーションの作成)
+            // グラデーションの作成
             let gradient;
             if (peach.color === 'yellow') {
               gradient = ctx.createLinearGradient(startX, 0, startX + labelWidth, 0);
@@ -297,9 +292,8 @@ export default {
             // 桃のラベルの背景
             ctx.fillStyle = gradient;
 
-            // 線とラベルの間に空白を設ける
-            const adjustedStartX = Math.max(startX, lineMargin / scale);
-            const adjustedEndX = Math.min(endX, width / scale - lineMargin / scale);
+            const adjustedStartX = Math.max(startX, lineMargin / scale) + lineMargin / scale;
+            const adjustedEndX = Math.min(endX, width / scale - lineMargin / scale) - lineMargin / scale;
             const adjustedLabelWidth = adjustedEndX - adjustedStartX;
 
             if (peach.texture === 'soft') {
