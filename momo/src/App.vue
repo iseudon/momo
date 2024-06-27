@@ -165,6 +165,9 @@ export default {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
+        // スケールファクターを定義（2倍の解像度）
+        const scale = 1.5;
+
         // 表示する月の範囲を決定
         const allMonths = peaches.value.flatMap(p => [
           parseInt(p.startPeriod.split('-')[0]),
@@ -182,71 +185,71 @@ export default {
         const displayEndMonth = hasEndMonth ? endMonth : endMonth - 1;
         const monthCount = displayEndMonth - displayStartMonth + 1;
 
-        // キャンバスのサイズを設定（幅を広げる）
-        const monthWidth = 250; // 1ヶ月あたりの幅を広げる
+        // キャンバスのサイズを設定（幅を広げ、高解像度化）
+        const monthWidth = 250 * scale;
         canvas.width = monthCount * monthWidth;
-        canvas.height = 450;
+        canvas.height = 400 * scale;
 
         const width = canvas.width;
         const height = canvas.height;
 
+        // コンテキストのスケールを設定
+        ctx.scale(scale, scale);
         // 背景を描画
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, width, height);
+        ctx.fillRect(0, 0, width / scale, height / scale);
 
         // タイトルを描画
         ctx.fillStyle = '#4A4A4A';
-        ctx.font = 'bold 20px Arial';
+        ctx.font = `bold ${18}px Arial`;
         ctx.textAlign = 'center';
-        ctx.fillText('桃の食べ頃カレンダー', width / 2, 25);
+        ctx.fillText('桃カレンダー', width / (2 * scale), 25);
 
         // 月と旬の区切り線を描画
         ctx.strokeStyle = '#4A4A4A';
-        ctx.lineWidth = 2;
-        ctx.font = '16px Arial';
+        ctx.lineWidth = 1;
+        ctx.font = `${14}px Arial`;
         ctx.textAlign = 'center';
 
         // 線とラベルの間の空白
-        const lineMargin = 2;
+        const lineMargin = 2 * scale;
 
         // 始端の左の線を描画
         ctx.beginPath();
-        ctx.moveTo(lineMargin, 60);
-        ctx.lineTo(lineMargin, height);
+        ctx.moveTo(lineMargin / scale, 50);
+        ctx.lineTo(lineMargin / scale, height / scale);
         ctx.stroke();
 
         for (let i = 0; i <= monthCount; i++) {
           const month = displayStartMonth + i;
-          const x = i * monthWidth;
+          const x = i * (monthWidth / scale);
 
           // 月の境界線（実線）
           ctx.beginPath();
-          ctx.moveTo(x, 60);
-          ctx.lineTo(x, height);
+          ctx.moveTo(x + lineMargin / scale, 50);
+          ctx.lineTo(x + lineMargin / scale, height / scale);
           ctx.stroke();
 
           // 月のラベル（最後の月は右端に表示）
           if (i < monthCount) {
-            ctx.fillText(`${month}月`, x + monthWidth / 2, 50);
+            ctx.fillText(`${month}月`, x + (monthWidth / scale) / 2, 40);
           }
 
-          // 旬の区切り線（破線）
+          // 旬の区切り線（実線、薄い色）
           if (i < monthCount) {
-            ctx.setLineDash([5, 5]);
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = '#CCCCCC';
             for (let j = 1; j <= 2; j++) {
-              const subX = x + (monthWidth * j / 3);
+              const subX = x + ((monthWidth / scale) * j / 3);
               ctx.beginPath();
-              ctx.moveTo(subX, 60);
-              ctx.lineTo(subX, height);
+              ctx.moveTo(subX, 50);
+              ctx.lineTo(subX, height / scale);
               ctx.stroke();
             }
-            ctx.setLineDash([]);
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#4A4A4A';
           }
         }
 
-        const labelHeight = 30;
+        const labelHeight = 25 * scale;
 
         // 桃のラベルを描画
         ctx.lineWidth = 1;
@@ -257,9 +260,9 @@ export default {
           const endMonth = parseInt(peach.endPeriod.split('-')[0]);
           const endDecade = parseInt(peach.endPeriod.split('-')[1]);
 
-          const startX = (startMonth - displayStartMonth) * monthWidth + ((startDecade - 1) * monthWidth / 3);
-          const endX = (endMonth - displayStartMonth + 1) * monthWidth - ((3 - endDecade) * monthWidth / 3);
-          const labelWidth = endX - startX + 28; // 2文字分広げる
+          const startX = ((startMonth - displayStartMonth) * monthWidth + ((startDecade - 1) * monthWidth / 3)) / scale;
+          const endX = ((endMonth - displayStartMonth + 1) * monthWidth - ((3 - endDecade) * monthWidth / 3)) / scale;
+          const labelWidth = endX - startX;
 
           // 重なりチェックと行の割り当て
           let rowIndex = rows.findIndex(row => {
@@ -276,10 +279,10 @@ export default {
 
         // 各行のラベルを描画
         rows.forEach((row, rowIndex) => {
-          const y = 70 + rowIndex * (labelHeight + 10);
+          const y = 60 + rowIndex * ((labelHeight / scale) + 10);
 
           row.forEach(({ startX, endX, peach, labelWidth }) => {
-            // グラデーションの作成
+            // ... (グラデーションの作成)
             let gradient;
             if (peach.color === 'yellow') {
               gradient = ctx.createLinearGradient(startX, 0, startX + labelWidth, 0);
@@ -295,50 +298,50 @@ export default {
             ctx.fillStyle = gradient;
 
             // 線とラベルの間に空白を設ける
-            const adjustedStartX = Math.max(startX, lineMargin);
-            const adjustedEndX = Math.min(endX, width - lineMargin);
+            const adjustedStartX = Math.max(startX, lineMargin / scale);
+            const adjustedEndX = Math.min(endX, width / scale - lineMargin / scale);
             const adjustedLabelWidth = adjustedEndX - adjustedStartX;
 
             if (peach.texture === 'soft') {
               // 柔らかい桃の場合、両端が丸い形状を描画
-              const radius = labelHeight / 2;
+              const radius = (labelHeight / scale) / 2;
               ctx.beginPath();
               ctx.moveTo(adjustedStartX + radius, y);
-              ctx.lineTo(adjustedStartX + adjustedLabelWidth - radius, y);
-              ctx.quadraticCurveTo(adjustedStartX + adjustedLabelWidth, y, adjustedStartX + adjustedLabelWidth, y + radius);
-              ctx.lineTo(adjustedStartX + adjustedLabelWidth, y + labelHeight - radius);
-              ctx.quadraticCurveTo(adjustedStartX + adjustedLabelWidth, y + labelHeight, adjustedStartX + adjustedLabelWidth - radius, y + labelHeight);
-              ctx.lineTo(adjustedStartX + radius, y + labelHeight);
-              ctx.quadraticCurveTo(adjustedStartX, y + labelHeight, adjustedStartX, y + labelHeight - radius);
+              ctx.lineTo(adjustedEndX - radius, y);
+              ctx.quadraticCurveTo(adjustedEndX, y, adjustedEndX, y + radius);
+              ctx.lineTo(adjustedEndX, y + (labelHeight / scale) - radius);
+              ctx.quadraticCurveTo(adjustedEndX, y + (labelHeight / scale), adjustedEndX - radius, y + (labelHeight / scale));
+              ctx.lineTo(adjustedStartX + radius, y + (labelHeight / scale));
+              ctx.quadraticCurveTo(adjustedStartX, y + (labelHeight / scale), adjustedStartX, y + (labelHeight / scale) - radius);
               ctx.lineTo(adjustedStartX, y + radius);
               ctx.quadraticCurveTo(adjustedStartX, y, adjustedStartX + radius, y);
               ctx.fill();
             } else {
               // 硬い桃の場合、通常の四角形を描画
-              ctx.fillRect(adjustedStartX, y, adjustedLabelWidth, labelHeight);
+              ctx.fillRect(adjustedStartX, y, adjustedLabelWidth, labelHeight / scale);
             }
 
             // 桃のラベルのテキスト
-            ctx.fillStyle = '#4A4A4A';
-            ctx.font = '14px Arial';
+            ctx.fillStyle = '#000000';
+            ctx.font = `${12}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(peach.name, adjustedStartX + adjustedLabelWidth / 2, y + labelHeight / 2);
+
+            // テキストが長い場合は省略
+            let text = peach.name;
+            if (ctx.measureText(text).width > adjustedLabelWidth - 10) {
+              text = text.substring(0, 5) + '...';
+            }
+            ctx.fillText(text, adjustedStartX + adjustedLabelWidth / 2, y + (labelHeight / scale) / 2);
           });
         });
-
-        // 終端の右の線を描画
-        ctx.beginPath();
-        ctx.moveTo(width - lineMargin, 60);
-        ctx.lineTo(width - lineMargin, height);
-        ctx.stroke();
 
         // キャンバスを画像データURLに変換
         const imageDataUrl = canvas.toDataURL('image/png');
 
         // 新しいタブで画像を開く
         const newTab = window.open();
-        newTab.document.write('<img src="' + imageDataUrl + '" alt="Peach Chart">');
+        newTab.document.write(`<img src="${imageDataUrl}" alt="Peach Chart" style="width: ${width / scale}px; height: ${height / scale}px;">`);
         newTab.document.close();
 
         console.log('Chart generated successfully');
