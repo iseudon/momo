@@ -243,33 +243,43 @@ export default {
 
           const startX = (startMonth - displayStartMonth) * monthWidth + ((startDecade - 1) * monthWidth / 3);
           const endX = (endMonth - displayStartMonth + 1) * monthWidth - ((3 - endDecade) * monthWidth / 3);
-          const labelWidth = endX - startX;
+          const labelWidth = endX - startX + 28; // 2文字分広げる
           const labelHeight = 30;
 
           const y = 70 + currentRow * (labelHeight + 10);
 
+          // グラデーションの作成
+          let gradient;
+          if (peach.color === 'yellow') {
+            gradient = ctx.createLinearGradient(startX, 0, startX + labelWidth, 0);
+            gradient.addColorStop(0, "#F1E8CE");
+            gradient.addColorStop(1, "#F0D38D");
+          } else {
+            gradient = ctx.createLinearGradient(startX, 0, startX + labelWidth, 0);
+            gradient.addColorStop(0, "#F3D0D1");
+            gradient.addColorStop(1, "#F19E95");
+          }
+
           // 桃のラベルの背景
-          ctx.fillStyle = peach.color === 'yellow' ? '#FFD700' : '#FFC0CB';
+          ctx.fillStyle = gradient;
 
           if (peach.texture === 'soft') {
-            // 柔らかい桃の場合、角丸の四角形を描画
-            const radius = labelHeight / 2;
+            // 柔らかい桃の場合、より丸みのある四角形を描画
+            const radius = labelHeight / 2 + 5; // 丸みを増加
             ctx.beginPath();
             ctx.moveTo(startX + radius, y);
-            ctx.lineTo(endX - radius, y);
-            ctx.quadraticCurveTo(endX, y, endX, y + radius);
-            ctx.lineTo(endX, y + labelHeight - radius);
-            ctx.quadraticCurveTo(endX, y + labelHeight, endX - radius, y + labelHeight);
+            ctx.lineTo(startX + labelWidth - radius, y);
+            ctx.quadraticCurveTo(startX + labelWidth, y, startX + labelWidth, y + radius);
+            ctx.lineTo(startX + labelWidth, y + labelHeight - radius);
+            ctx.quadraticCurveTo(startX + labelWidth, y + labelHeight, startX + labelWidth - radius, y + labelHeight);
             ctx.lineTo(startX + radius, y + labelHeight);
             ctx.quadraticCurveTo(startX, y + labelHeight, startX, y + labelHeight - radius);
             ctx.lineTo(startX, y + radius);
             ctx.quadraticCurveTo(startX, y, startX + radius, y);
             ctx.fill();
-            ctx.stroke();
           } else {
             // 硬い桃の場合、通常の四角形を描画
             ctx.fillRect(startX, y, labelWidth, labelHeight);
-            ctx.strokeRect(startX, y, labelWidth, labelHeight);
           }
 
           // 桃のラベルのテキスト
@@ -281,6 +291,14 @@ export default {
 
           currentRow++;
         });
+
+        // 終端の月の右側に線を追加
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(width, 60);
+        ctx.lineTo(width, height);
+        ctx.stroke();
 
         // キャンバスを画像データURLに変換
         const imageDataUrl = canvas.toDataURL('image/png');
