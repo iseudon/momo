@@ -47,16 +47,18 @@
 
     <!-- 桃の一覧 -->
     <h2>桃の一覧</h2>
-    <ul>
-      <li v-for="(peach, index) in peaches" :key="index">
-        {{ peach.name }} - {{ getPeriodLabel(peach.startPeriod) }}から{{ getPeriodLabel(peach.endPeriod) }}
-        <br>
-        色: {{ peach.color === 'yellow' ? '黄色' : 'ピンク' }},
-        硬さ: {{ peach.texture === 'hard' ? '硬い' : '柔らかい' }}
-        <button @click="editPeach(index)">編集</button>
-        <button @click="removePeach(index)">削除</button>
-      </li>
-    </ul>
+    <draggable v-model="peaches" @end="updateOrder" item-key="id">
+      <template #item="{ element, index }">
+        <li class="draggable-item">
+          {{ element.name }} - {{ getPeriodLabel(element.startPeriod) }}から{{ getPeriodLabel(element.endPeriod) }}
+          <br>
+          色: {{ element.color === 'yellow' ? '黄色' : 'ピンク' }},
+          硬さ: {{ element.texture === 'hard' ? '硬い' : '柔らかい' }}
+          <button @click="editPeach(index)">編集</button>
+          <button @click="removePeach(index)">削除</button>
+        </li>
+      </template>
+    </draggable>
 
     <!-- チャート生成ボタン -->
     <button @click="generateChart" :disabled="peaches.length === 0">チャートを生成</button>
@@ -65,8 +67,12 @@
 
 <script>
 import { ref, computed } from 'vue';
+import draggable from 'vuedraggable';
 
 export default {
+  components: {
+    draggable
+  },
   setup() {
     const peaches = ref([]);
     const newPeach = ref({
@@ -106,13 +112,19 @@ export default {
     };
 
     const addPeach = () => {
-      const peach = {
-        ...newPeach.value,
-        startPeriod: getPeriodValue(newPeach.value.startMonth, newPeach.value.startDecade),
-        endPeriod: getPeriodValue(newPeach.value.endMonth, newPeach.value.endDecade)
+      const newPeach = {
+        id: Date.now(), // ユニークなIDとして現在のタイムスタンプを使用
+        name: newPeachData.value.name,
+        startPeriod: `${newPeachData.value.startMonth}-${newPeachData.value.startDecade}`,
+        endPeriod: `${newPeachData.value.endMonth}-${newPeachData.value.endDecade}`,
+        color: newPeachData.value.color,
+        texture: newPeachData.value.texture
       };
-      peaches.value.push(peach);
-      newPeach.value = {
+
+      peaches.value.push(newPeach);
+
+      // フォームをリセット
+      newPeachData.value = {
         name: '',
         startMonth: '',
         startDecade: '',
@@ -146,13 +158,25 @@ export default {
       return `${month}月${decadeLabel}`;
     };
 
+    const updateOrder = () => {
+      // ドラッグ＆ドロップ後の処理
+      // 必要に応じて追加の処理を行うことができます
+      console.log('Order updated:', peaches.value);
+    };
+
     const generateChart = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
 
+      // 表示する月の範囲を決定
+      const startMonth = Math.min(...peaches.value.map(p => parseInt(p.startPeriod.split('-')[0])));
+      const endMonth = Math.max(...peaches.value.map(p => parseInt(p.endPeriod.split('-')[0])));
+      const monthCount = endMonth - startMonth + 1;
+
       // キャンバスのサイズを設定
-      canvas.width = 800;
-      canvas.height = 450; // 上部のタイトル用に高さを少し増やす
+      const monthWidth = 200; // 1ヶ月あたりの幅
+      canvas.width = monthCount * monthWidth;
+      canvas.height = 450;
 
       const width = canvas.width;
       const height = canvas.height;
@@ -168,16 +192,14 @@ export default {
       ctx.fillText('桃の食べ頃カレンダー', width / 2, 25);
 
       // 月と旬の区切り線を描画
-      const months = ['6月', '7月', '8月'];
-      const monthWidth = width / months.length;
-
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 2;
       ctx.font = '16px Arial';
       ctx.textAlign = 'center';
 
-      months.forEach((month, index) => {
-        const x = index * monthWidth;
+      for (let i = 0; i < monthCount; i++) {
+        const month = startMonth + i;
+        const x = i * monthWidth;
 
         // 月の境界線（実線）
         ctx.beginPath();
@@ -186,39 +208,39 @@ export default {
         ctx.stroke();
 
         // 月のラベル
-        ctx.fillText(month, x + monthWidth / 2, 50);
+        ctx.fillText(`${month}月`, x + monthWidth / 2, 50);
 
         // 旬の区切り線（破線）
         ctx.setLineDash([5, 5]);
         ctx.lineWidth = 1;
-        for (let i = 1; i <= 2; i++) {
-          const subX = x + (monthWidth * i / 3);
+        for (let j = 1; j <= 2; j++) {
+          const subX = x + (monthWidth * j / 3);
           ctx.beginPath();
           ctx.moveTo(subX, 60);
           ctx.lineTo(subX, height);
           ctx.stroke();
         }
         ctx.setLineDash([]);
-      });
+      }
 
       // 桃のラベルを描画
       ctx.lineWidth = 1;
       let currentRow = 0;
       peaches.value.forEach((peach) => {
-        const startMonth = parseInt(peach.startPeriod.split('-')[0]) - 6;
+        const startMonth = parseInt(peach.startPeriod.split('-')[0]);
         const startDecade = parseInt(peach.startPeriod.split('-')[1]);
-        const endMonth = parseInt(peach.endPeriod.split('-')[0]) - 6;
+        const endMonth = parseInt(peach.endPeriod.split('-')[0]);
         const endDecade = parseInt(peach.endPeriod.split('-')[1]);
 
-        const startX = (startMonth * monthWidth) + ((startDecade - 1) * monthWidth / 3);
-        const endX = (endMonth * monthWidth) + (endDecade * monthWidth / 3);
+        const startX = (startMonth - startMonth) * monthWidth + ((startDecade - 1) * monthWidth / 3);
+        const endX = (endMonth - startMonth + 1) * monthWidth + (endDecade * monthWidth / 3);
         const labelWidth = endX - startX;
         const labelHeight = 30;
 
         const y = 70 + currentRow * (labelHeight + 10);
 
         // 桃のラベルの背景
-        ctx.fillStyle = peach.color === 'yellow' ? '#FFD700' : '#FFD2C7';
+        ctx.fillStyle = peach.color === 'yellow' ? '#FFD700' : '#FFC0CB';
 
         if (peach.texture === 'soft') {
           // 柔らかい桃の場合、角丸の四角形を描画
@@ -258,8 +280,10 @@ export default {
       const newTab = window.open();
       newTab.document.write('<img src="' + imageDataUrl + '" alt="Peach Chart">');
     };
+
     return {
       peaches,
+      updateOrder,
       newPeach,
       months,
       addPeach,
@@ -294,33 +318,16 @@ form {
   gap: 10px;
 }
 
-ul {
+.draggable-list {
   list-style-type: none;
   padding: 0;
 }
 
-li {
-  margin-bottom: 20px;
+.draggable-item {
+  cursor: move;
   padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-}
-
-button {
-  background-color: #4CAF50;
-  color: white;
-  padding: 10px;
-  border: none;
-  cursor: pointer;
-  margin-top: 10px;
-}
-
-button:hover {
-  background-color: #45a049;
-}
-
-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
+  margin-bottom: 5px;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
 }
 </style>
