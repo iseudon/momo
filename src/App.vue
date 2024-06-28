@@ -164,6 +164,8 @@ export default {
 
         // スケールファクターを定義
         const scale = 1.5;
+        // 余白を定義
+        const padding = 16 * scale;
 
         // 表示する月の範囲を決定
         const allMonths = peaches.value.flatMap(p => [
@@ -182,10 +184,10 @@ export default {
         const displayEndMonth = hasEndMonth ? endMonth : endMonth - 1;
         const monthCount = displayEndMonth - displayStartMonth + 1;
 
-        // キャンバスのサイズを設定
+        // キャンバスのサイズを設定（余白を含める）
         const monthWidth = 250 * scale;
-        canvas.width = monthCount * monthWidth;
-        canvas.height = 400 * scale;
+        canvas.width = monthCount * monthWidth + (padding * 2);  // 左右の余白を追加
+        canvas.height = 400 * scale + (padding * 2);  // 上下の余白を追加
 
         const width = canvas.width;
         const height = canvas.height;
@@ -197,6 +199,8 @@ export default {
         ctx.fillStyle = '#F5F9F4';
         ctx.fillRect(0, 0, width / scale, height / scale);
 
+        // 描画位置を余白分ずらす
+        ctx.translate(padding / scale, padding / scale);
 
         // 月を上部に表示
         ctx.fillStyle = '#4A4A4A';
@@ -221,28 +225,28 @@ export default {
 
 
         // 始端の左の線を描画
-        ctx.beginPath();
-        ctx.moveTo(lineMargin / scale - 4, 30);
-        ctx.lineTo(lineMargin / scale - 4, height / scale);
-        ctx.stroke();
+        // ctx.beginPath();
+        // ctx.moveTo(lineMargin / scale - 4, 30);
+        // ctx.lineTo(lineMargin / scale - 4, height / scale);
+        // ctx.stroke();
 
         // 終端の右の線を描画
-        ctx.beginPath();
-        ctx.moveTo(width / scale - lineMargin / scale, 30);
-        ctx.lineTo(width / scale - lineMargin / scale, height / scale);
-        ctx.stroke();
+        // ctx.beginPath();
+        // ctx.moveTo(width / scale - lineMargin / scale, 30);
+        // ctx.lineTo(width / scale - lineMargin / scale, height / scale);
+        // ctx.stroke();
 
         for (let i = 0; i <= monthCount; i++) {
           const month = displayStartMonth + i;
           const x = i * (monthWidth / scale);
 
           // 月の境界線（実線）
-          if (i != monthCount) {
-            ctx.beginPath();
-            ctx.moveTo(x + lineMargin - 4 / scale, 30);
-            ctx.lineTo(x + lineMargin - 4 / scale, height / scale);
-            ctx.stroke();
-          }
+          // if (i != monthCount) {
+          ctx.beginPath();
+          ctx.moveTo(x + lineMargin - 4 / scale, 30);
+          ctx.lineTo(x + lineMargin - 4 / scale, height / scale);
+          ctx.stroke();
+          // }
 
           // 月のラベル
           // if (i < monthCount) {
