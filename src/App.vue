@@ -1,6 +1,6 @@
 <template>
   <div class="peach-planner">
-    <h1>桃の食べ頃プランナー</h1>
+    <h1>桃プランナー</h1>
 
     <!-- 桃の入力フォーム -->
     <form @submit.prevent="addPeach">
@@ -47,18 +47,16 @@
 
     <!-- 桃の一覧 -->
     <h2>桃の一覧</h2>
-    <draggable v-model="peaches" @end="updateOrder" item-key="id" class="draggable-list">
-      <template #item="{ element, index }">
-        <li class="draggable-item">
-          {{ element.name }} - {{ getPeriodLabel(element.startPeriod) }}から{{ getPeriodLabel(element.endPeriod) }}
-          <br>
-          色: {{ element.color === 'yellow' ? '黄色' : 'ピンク' }},
-          硬さ: {{ element.texture === 'hard' ? '硬い' : '柔らかい' }}
-          <button @click="editPeach(index)">編集</button>
-          <button @click="removePeach(index)">削除</button>
-        </li>
-      </template>
-    </draggable>
+    <ul class="peach-list">
+      <li v-for="(element, index) in peaches" :key="element.id" class="peach-item">
+        {{ element.name }} - {{ getPeriodLabel(element.startPeriod) }}から{{ getPeriodLabel(element.endPeriod) }}
+        <br>
+        色: {{ element.color === 'yellow' ? '黄色' : 'ピンク' }},
+        硬さ: {{ element.texture === 'hard' ? '硬い' : '柔らかい' }}
+        <button @click="editPeach(index)">編集</button>
+        <button @click="removePeach(index)">削除</button>
+      </li>
+    </ul>
 
     <!-- チャート生成ボタン -->
     <button @click="generateChart" :disabled="peaches.length === 0">チャートを生成</button>
@@ -196,7 +194,7 @@ export default {
         ctx.scale(scale, scale);
 
         // 背景を描画
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = '#F5F9F4';
         ctx.fillRect(0, 0, width / scale, height / scale);
 
 
@@ -219,11 +217,13 @@ export default {
 
         // 線とラベルの間の空白
         const lineMargin = 2 * scale;
+        const labelMargin = 4 * scale; // ラベル間の余白を増やす
+
 
         // 始端の左の線を描画
         ctx.beginPath();
-        ctx.moveTo(lineMargin / scale, 30);
-        ctx.lineTo(lineMargin / scale, height / scale);
+        ctx.moveTo(lineMargin / scale - 4, 30);
+        ctx.lineTo(lineMargin / scale - 4, height / scale);
         ctx.stroke();
 
         // 終端の右の線を描画
@@ -237,10 +237,12 @@ export default {
           const x = i * (monthWidth / scale);
 
           // 月の境界線（実線）
-          ctx.beginPath();
-          ctx.moveTo(x + lineMargin / scale, 30);
-          ctx.lineTo(x + lineMargin / scale, height / scale);
-          ctx.stroke();
+          if (i != monthCount) {
+            ctx.beginPath();
+            ctx.moveTo(x + lineMargin - 4 / scale, 30);
+            ctx.lineTo(x + lineMargin - 4 / scale, height / scale);
+            ctx.stroke();
+          }
 
           // 月のラベル
           // if (i < monthCount) {
@@ -291,27 +293,29 @@ export default {
 
         // 各行のラベルを描画
         rows.forEach((row, rowIndex) => {
-          const y = 40 + rowIndex * ((labelHeight / scale) + 10);
+          const y = 40 + rowIndex * ((labelHeight / scale) + labelMargin / scale);
 
           row.forEach(({ startX, endX, peach, labelWidth }) => {
             // グラデーションの作成
             let gradient;
             if (peach.color === 'yellow') {
               gradient = ctx.createLinearGradient(startX, 0, startX + labelWidth, 0);
-              gradient.addColorStop(0, "#F1E8CE");
-              gradient.addColorStop(1, "#F0D38D");
+              gradient.addColorStop(0, "#FFF3C7");
+              gradient.addColorStop(1, "#FFF3C7");
             } else {
               gradient = ctx.createLinearGradient(startX, 0, startX + labelWidth, 0);
-              gradient.addColorStop(0, "#F3D0D1");
-              gradient.addColorStop(1, "#F19E95");
+              gradient.addColorStop(0, "#FEC7B4");
+              gradient.addColorStop(1, "#FEC7B4");
             }
 
             // 桃のラベルの背景
             ctx.fillStyle = gradient;
 
+            // すべての月の境界線に対して余白を適用
             const adjustedStartX = Math.max(startX, lineMargin / scale) + lineMargin / scale;
             const adjustedEndX = Math.min(endX, width / scale - lineMargin / scale) - lineMargin / scale;
             const adjustedLabelWidth = adjustedEndX - adjustedStartX;
+
 
             if (peach.texture === 'soft') {
               // 柔らかい桃の場合、両端が丸い形状を描画
@@ -430,6 +434,7 @@ body {
 }
 
 .peach-planner {
+  font-size: 16px;
   max-width: 600px;
   margin: 0 auto;
   padding: 20px;
@@ -459,19 +464,19 @@ button {
   padding: 5px;
 }
 
-.draggable-list {
+.peach-list {
   list-style-type: none;
   padding: 0;
 }
 
-.draggable-item {
-  cursor: move;
+.peach-item {
   padding: 10px;
   margin-bottom: 5px;
   background-color: var(--input-background);
   border: 1px solid var(--border-color);
   color: var(--text-color);
 }
+
 
 button {
   cursor: pointer;
