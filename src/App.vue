@@ -219,11 +219,11 @@ export default {
         ctx.font = `${14}px Arial`;
         ctx.textAlign = 'center';
 
+        const labelHeight = 25 * scale;
+
         // 線とラベルの間の空白
         const lineMargin = 2 * scale;
-        const labelMargin = 4 * scale; // ラベル間の余白を増やす
-
-
+        const labelMargin = labelHeight / (2 * scale);
         // 始端の左の線を描画
         // ctx.beginPath();
         // ctx.moveTo(lineMargin / scale - 4, 30);
@@ -267,7 +267,7 @@ export default {
           }
         }
 
-        const labelHeight = 25 * scale;
+
 
         // 桃のラベルを描画
         ctx.lineWidth = 1;
@@ -297,7 +297,7 @@ export default {
 
         // 各行のラベルを描画
         rows.forEach((row, rowIndex) => {
-          const y = 40 + rowIndex * ((labelHeight / scale) + labelMargin / scale);
+          const y = 40 + rowIndex * (labelHeight / scale + labelMargin);
 
           row.forEach(({ startX, endX, peach, labelWidth }) => {
             // グラデーションの作成
