@@ -244,7 +244,7 @@ export default {
           // if (i != monthCount) {
           ctx.beginPath();
           ctx.moveTo(x + lineMargin - 4 / scale, 30);
-          ctx.lineTo(x + lineMargin - 4 / scale, height / scale);
+          ctx.lineTo(x + lineMargin - 4 / scale, height / scale - 30);
           ctx.stroke();
           // }
 
@@ -260,7 +260,7 @@ export default {
               const subX = x + ((monthWidth / scale) * j / 3);
               ctx.beginPath();
               ctx.moveTo(subX, 30);
-              ctx.lineTo(subX, height / scale);
+              ctx.lineTo(subX, height / scale - 30);
               ctx.stroke();
             }
             ctx.strokeStyle = '#4A4A4A';
